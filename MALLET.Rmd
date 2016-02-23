@@ -99,6 +99,9 @@ for (text in 1:length(documents$Text))
   word.list.list[text] <- strsplit(documents$Text[[text]], ' ')
 }
 
+head(word.list.list)
+
+
 # Create a new list, in which each entry will be a single character string containing the nouns from each tablet
 word.list.filtered <- list()
 
@@ -122,8 +125,9 @@ for (text in 1:length(word.list.list))
     word.list.filtered[length(word.list.filtered)+1] <- new.char
 }
 
-head(word.list.list)
+head(word.list.filtered)
 
+documents$Text.Nouns <- word.list.filtered
 ```
 
 ## Show the first few document titles with at least .25 of its content devoted to topic 4

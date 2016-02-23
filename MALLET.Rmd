@@ -130,7 +130,7 @@ head(word.list.filtered)
 documents$Text.Nouns <- word.list.filtered
 ```
 
-Often when we work with very short texts like tablets or poems, it is useful to aggregate these into a few larger texts. However, the basis on which we decide to aggregate can have interpretive consequences. Do we collect all of the tablets by a given author? All of the tablets from a certain region? 
+Often when we work with very short texts like tablets or poems, it is useful to aggregate these into a few, larger super-texts. However, the basis on which we decide to aggregate can have interpretive consequences. Do we collect all of the tablets by a given author? All of the tablets from a certain region? 
 
 In this case, we will gather texts by their chapter in the SAA. Ostensibly, these have already been curated by theme (e.g. "Letters to the King"). In a sense, we will use our topic model to evaluate each chapter's degree of thematic unity!
 

@@ -134,6 +134,8 @@ Often when we work with very short texts like tablets or poems, it is useful to 
 
 In this case, we will gather texts by their chapter in the SAA. Ostensibly, these have already been curated by theme (e.g. "Letters to the King"). In a sense, we will use our topic model to evaluate each chapter's degree of thematic unity!
 
+## 3. Evaluate Our Model
+
 ```
 ## Show the first few document titles with at least .25 of its content devoted to topic 4
 head(documents$title[ doc.topics[4,] > 0.25 ],10)

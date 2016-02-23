@@ -1,0 +1,83 @@
+### Setup Environment
+
+Load up required packages.
+
+```{r}
+setwd("~/Downloads/MALLET-Lesson")
+rm(list=ls())
+library(mallet) # a wrapper around the Java machine learning tool MALLET
+library(wordcloud) # to visualize wordclouds
+```
+
+## 0. Prepare
+
+First let's read in our data. The corpus comes from ORACC ([The Open Richly Annotated Cuneiform Corpus](http://oracc.museum.upenn.edu)), which hosts the State Archives of Assyria Online. Each entry contains the transcription of a tablet and its bibliographic information.
+
+```{r}
+#read in CSV file
+documents <- read.csv("SAA.csv", stringsAsFactors = F)
+names(documents)
+```
+
+## 1. Estimate Mallet Topics
+
+```{r}
+
+# load data into mallet
+# the list of stopwords is empty for now, but we'll revisit it later
+mallet.instances <- mallet.import(documents$Designation, documents$Text, "Data/stoplist.csv", FALSE, token.regexp="[\\p{L}']+")
+
+# Decide what number of topics to model
+n.topics = 10
+
+## Create a topic trainer object.
+topic.model <- MalletLDA(n.topics)
+
+## Load our documents
+topic.model$loadDocuments(mallet.instances)
+
+## Get the vocabulary, and some statistics about word frequencies.
+##  These may be useful in further curating the stopword list.
+vocabulary <- topic.model$getVocabulary()
+word.freqs <- mallet.word.freqs(topic.model)
+
+# examine some of the vocabulary
+word.freqs[1:10,]
+
+## Optimize hyperparameters every 10 iterations, 
+##  after 200 burn-in iterations.
+topic.model$setAlphaOptimization(10, 200)
+
+## Now train a model. Note that hyperparameter optimization is on, by default.
+## We can specify the number of iterations to train the model.
+## Typically 1000-5000 iterations is appropriate.
+topic.model$train(2500)
+
+## Get the probability of topics in documents and the probability of words in topics.
+## By default, these functions return raw word counts. Here we want probabilities, 
+##  so we normalize, and add "smoothing" so that nothing has exactly 0 probability.
+doc.topics <- mallet.doc.topics(topic.model, smoothed=T, normalized=T)
+topic.words <- mallet.topic.words(topic.model, smoothed=T, normalized=T)
+
+## What are the top words in topic 7?
+## Notice that R indexes from 1, so this will be the topic that mallet called topic 6.
+mallet.top.words(topic.model, topic.words[6,])
+
+## Get a vector containing short names for the topics
+topics.labels <- rep("", n.topics)
+for (topic in 1:n.topics) topics.labels[topic] <- paste(mallet.top.words(topic.model, topic.words[topic,], num.top.words=5)$words, collapse=" ")
+
+## Have a look at keywords for each topic
+topics.labels
+```
+
+## 2. Revising Our Model
+
+For a variety of reasons, we typically remove stopwords from our documents before feeding them into the topic model.
+
+```
+## Show the first few document titles with at least .25 of its content devoted to topic 4
+head(documents$title[ doc.topics[4,] > 0.25 ],10)
+
+## Show title of the most representative text for topic 4
+documents[which.max(doc.topics[4,]),]$title

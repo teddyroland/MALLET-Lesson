@@ -136,6 +136,8 @@ In this case, we will gather texts by their chapter in the SAA. Ostensibly, thes
 
 ```
 grouped.documents <- aggregate(Text~Vol_Chap, documents, paste, collapse=' ')
+
+head(grouped.documents)
 ```
 
 ## 3. Evaluate Our Model

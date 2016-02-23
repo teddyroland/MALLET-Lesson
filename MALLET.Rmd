@@ -73,9 +73,59 @@ topics.labels
 
 ## 2. Revising Our Model
 
-For a variety of reasons, we typically remove stopwords from our documents before feeding them into the topic model.
+For a variety of reasons, we typically remove stopwords ('to', 'of', 'and', etc) from our documents before feeding them into the topic model. These words appear with high frequency in many of our documents and potentially create noise in the patterns we are looking for.
 
 ```
+# Sort the list of words in our model by the number of documents in which they appear
+order.freq <- order(word.freqs$doc.freq, decreasing = TRUE)
+ordered.words <- word.freqs[order.freq,]
+
+# Inspect the most frequent words in our corpus
+head(ordered.words)
+
+# For more comprehensive treatment, we can export our word list to a CSV.
+# After inspecting that by hand, we may wish to add terms to the stopword file.
+write.csv(ordered.words, 'Word-Frequencies.csv'
+```
+
+In his study of literary theme, Matt Jockers has suggested that it may be useful to include only nouns when topic modeling. Since the corpus includes a POS-tag with each word, it is relatively easy to filter out other parts of speech. (We will also filter our proper nouns, which is a standard practice.)
+
+```
+# Create a new list, in which each entry will be a list of the words from each tablet
+word.list.list <- list()
+
+for (text in 1:length(documents$Text))
+{
+  word.list.list[text] <- strsplit(documents$Text[[text]], ' ')
+}
+
+# Create a new list, in which each entry will be a single character string containing the nouns from each tablet
+word.list.filtered <- list()
+
+for (text in 1:length(word.list.list))
+{
+    this.word.list <- word.list.list[text][[1]]
+    new.list <- list()
+    
+    for (word in 1:length(this.word.list))
+    {
+        this.word <- this.word.list[word]
+        tag.index <- gregexpr(']', this.word)[[1]][1] + 1
+        tag <- substr(this.word, tag.index, nchar(this.word))
+        if (tag=='N')
+        {
+            new.list[length(new.list)+1] <- this.word
+        }
+	
+    }
+    new.char <- paste(new.list, collapse = ' ')
+    word.list.filtered[length(word.list.filtered)+1] <- new.char
+}
+
+head(word.list.list)
+
+```
+
 ## Show the first few document titles with at least .25 of its content devoted to topic 4
 head(documents$title[ doc.topics[4,] > 0.25 ],10)
 

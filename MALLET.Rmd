@@ -24,7 +24,8 @@ names(documents)
 
 # load data into mallet
 # the list of stopwords is empty for now, but we'll revisit it later
-mallet.instances <- mallet.import(documents$Designation, documents$Text, "Data/stoplist.csv", FALSE, token.regexp="[\\p{L}|\\p{N}|\\p{P}']+")
+mallet.instances <- mallet.import(documents$Designation, documents$Text,
+                                  "Data/stoplist.csv", FALSE, token.regexp="[\\p{L}|\\p{N}|\\p{P}']+")
 
 # Decide what number of topics to model
 n.topics = 10
@@ -71,7 +72,8 @@ mallet.top.words(topic.model, topic.words[7,])
 topics.labels <- rep("", n.topics)
 for (topic in 1:n.topics)
 {
-  topics.labels[topic] <- paste(mallet.top.words(topic.model, topic.words[topic,], num.top.words=5)$words, collapse=" ")
+  topics.labels[topic] <- paste(mallet.top.words(
+    topic.model, topic.words[topic,], num.top.words=5)$words, collapse=" ")
 }
 
 ## Have a look at keywords for each topic
@@ -105,7 +107,8 @@ write.csv(ordered.words, 'Data/Word-Frequencies.csv', row.names=FALSE)
 In his study of literary theme, Matt Jockers has suggested that it may be useful to include only nouns when topic modeling. Since the corpus includes a POS-tag with each word, it is relatively easy to filter out other parts of speech. (We will also filter out proper nouns, which is a standard practice.)
 
 ```{r}
-# Create a new list, in which each entry will be a list of the words from each tablet
+# Create a new list, in which each entry will be a list of the words
+# from each tablet
 word.list.list <- list()
 
 for (text in 1:length(documents$Text))
@@ -116,7 +119,8 @@ for (text in 1:length(documents$Text))
 head(word.list.list)
 
 
-# Create a new list, in which each entry will be a character vector containing the nouns from each tablet
+# Create a new list, in which each entry will be a character vector
+# containing the nouns from each tablet
 word.list.filtered <- list()
 
 for (text in 1:length(word.list.list))
@@ -146,7 +150,8 @@ for (text in 1:length(word.list.list))
 head(word.list.filtered)
 
 
-# Create a new list, in which each entry will be a single character string containing the nouns from each tablet
+# Create a new list, in which each entry will be a single character string
+# containing the nouns from each tablet
 noun.list.strings <- c()
 for (text in 1:length(word.list.filtered))
 {
@@ -178,7 +183,8 @@ Now that we've done some work to revise our model, let's perform the training ag
 ```{r}
 grouped.documents <- aggregate(Text.Nouns~Vol_Chap, documents, paste, collapse=' ')
 
-mallet.instances <- mallet.import(grouped.documents$Vol_Chap, grouped.documents$Text.Nouns, "Data/stoplist.csv", FALSE, token.regexp="[\\p{L}|\\p{N}|\\p{P}']+")
+mallet.instances <- mallet.import(grouped.documents$Vol_Chap, grouped.documents$Text.Nouns,
+                                  "Data/stoplist.csv", FALSE, token.regexp="[\\p{L}|\\p{N}|\\p{P}']+")
 
 n.topics = 10
 topic.model <- MalletLDA(n.topics)

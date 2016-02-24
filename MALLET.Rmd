@@ -1,31 +1,30 @@
 ### Set Up Environment
 
-Load up required packages.
+Load required packages.
 
 ```{r}
-setwd("~/Downloads/MALLET-Lesson")
+setwd("~/Users/Teddy/Documents/GitHub/MALLET-Lesson")
 rm(list=ls())
 library(mallet) # a wrapper around the Java machine learning tool MALLET
-library(wordcloud) # to visualize wordclouds
 ```
 
-## 0. Prepare
+## 0. Preparation
 
 First let's read in our data. The corpus comes from ORACC ([The Open Richly Annotated Cuneiform Corpus](http://oracc.museum.upenn.edu)), which hosts the State Archives of Assyria Online. Each entry contains the transcription of a tablet and its bibliographic information.
 
 ```{r}
 #read in CSV file
-documents <- read.csv("SAA.csv", stringsAsFactors = F, colClasses = c('Vol_Chap'='character'))
+documents <- read.csv("Data/SAAO.csv", stringsAsFactors = F, colClasses = c('Vol_Chap'='character'))
 names(documents)
 ```
 
-## 1. Estimate Mallet Topics
+## 1. Training the Topic Model
 
 ```{r}
 
 # load data into mallet
 # the list of stopwords is empty for now, but we'll revisit it later
-mallet.instances <- mallet.import(documents$Designation, documents$Text, "Data/stoplist.csv", FALSE, token.regexp="[\\p{L}']+")
+mallet.instances <- mallet.import(documents$Designation, documents$Text, "Data/stoplist.csv", FALSE, token.regexp="[\\p{L}|\\p{N}|\\p{P}']+")
 
 # Decide what number of topics to model
 n.topics = 10
@@ -52,7 +51,13 @@ topic.model$setAlphaOptimization(10, 200)
 ## We can specify the number of iterations to train the model.
 ## Typically 1000-5000 iterations is appropriate.
 topic.model$train(2500)
+```
 
+## 2. Evaluating the Model
+
+Now that we have trained the topic model on our corpus, we'll want to know what it found. This inspection serves the double purpose of identifying the patterns our topic model had discovered and of evaluating the model's own explanatory power. Are we convinced that the topics are valuable to our research questions?
+
+```{r}
 ## Get the probability of topics in documents and the probability of words in topics.
 ## By default, these functions return raw word counts. Here we want probabilities, 
 ##  so we normalize, and add "smoothing" so that nothing has exactly 0 probability.
@@ -60,22 +65,31 @@ doc.topics <- mallet.doc.topics(topic.model, smoothed=T, normalized=T)
 topic.words <- mallet.topic.words(topic.model, smoothed=T, normalized=T)
 
 ## What are the top words in topic 7?
-## Notice that R indexes from 1, so this will be the topic that mallet called topic 6.
-mallet.top.words(topic.model, topic.words[6,])
+mallet.top.words(topic.model, topic.words[7,])
 
-## Get a vector containing short names for the topics
+## Get a vector containing short names for all topics
 topics.labels <- rep("", n.topics)
-for (topic in 1:n.topics) topics.labels[topic] <- paste(mallet.top.words(topic.model, topic.words[topic,], num.top.words=5)$words, collapse=" ")
+for (topic in 1:n.topics)
+{
+  topics.labels[topic] <- paste(mallet.top.words(topic.model, topic.words[topic,], num.top.words=5)$words, collapse=" ")
+}
 
 ## Have a look at keywords for each topic
 topics.labels
+
+## Show title of the most representative text for topic 7
+documents[which.max(doc.topics[7,]),]$Descriptive_Title
+
+## Show the first few document titles with at least .25 of its content devoted to topic 4
+head(documents$Descriptive_Title[ doc.topics[7,] > 0.25 ],10)
+
 ```
 
-## 2. Revising Our Model
+## 3. Revising the Model
 
 For a variety of reasons, we typically remove stopwords ('to', 'of', 'and', etc) from our documents before feeding them into the topic model. These words appear with high frequency in many of our documents and potentially create noise in the patterns we are looking for.
 
-```
+```{r}
 # Sort the list of words in our model by the number of documents in which they appear
 order.freq <- order(word.freqs$doc.freq, decreasing = TRUE)
 ordered.words <- word.freqs[order.freq,]
@@ -85,12 +99,12 @@ head(ordered.words)
 
 # For more comprehensive treatment, we can export our word list to a CSV.
 # After inspecting that by hand, we may wish to add terms to the stopword file.
-write.csv(ordered.words, 'Word-Frequencies.csv'
+write.csv(ordered.words, 'Data/Word-Frequencies.csv', row.names=FALSE)
 ```
 
-In his study of literary theme, Matt Jockers has suggested that it may be useful to include only nouns when topic modeling. Since the corpus includes a POS-tag with each word, it is relatively easy to filter out other parts of speech. (We will also filter our proper nouns, which is a standard practice.)
+In his study of literary theme, Matt Jockers has suggested that it may be useful to include only nouns when topic modeling. Since the corpus includes a POS-tag with each word, it is relatively easy to filter out other parts of speech. (We will also filter out proper nouns, which is a standard practice.)
 
-```
+```{r}
 # Create a new list, in which each entry will be a list of the words from each tablet
 word.list.list <- list()
 
@@ -102,7 +116,7 @@ for (text in 1:length(documents$Text))
 head(word.list.list)
 
 
-# Create a new list, in which each entry will be a single character string containing the nouns from each tablet
+# Create a new list, in which each entry will be a character vector containing the nouns from each tablet
 word.list.filtered <- list()
 
 for (text in 1:length(word.list.list))
@@ -119,32 +133,88 @@ for (text in 1:length(word.list.list))
         {
             new.list[length(new.list)+1] <- this.word
         }
-	
     }
-    new.char <- paste(new.list, collapse = ' ')
-    word.list.filtered[length(word.list.filtered)+1] <- new.char
+    
+    if (length(new.list)==0)
+    {
+      new.list[1] <- ""
+    }
+    
+    word.list.filtered[[length(word.list.filtered)+1]] <- unlist(new.list)
 }
 
 head(word.list.filtered)
 
-documents$Text.Nouns <- word.list.filtered
+
+# Create a new list, in which each entry will be a single character string containing the nouns from each tablet
+noun.list.strings <- c()
+for (text in 1:length(word.list.filtered))
+{
+  this.noun.list <- word.list.filtered[text][[1]]
+  new.char <- paste(this.noun.list, collapse = ' ')
+  noun.list.strings[length(noun.list.strings)+1] <- new.char
+}
+
+head(noun.list.strings)
+
+documents$Text.Nouns <- noun.list.strings
 ```
 
 Often when we work with very short texts like tablets or poems, it is useful to aggregate these into a few, larger super-texts. However, the basis on which we decide to aggregate can have interpretive consequences. Do we collect all of the tablets by a given author? All of the tablets from a certain region? 
 
 In this case, we will gather texts by their chapter in the SAA. Ostensibly, these have already been curated by theme (e.g. "Letters to the King"). In a sense, we will use our topic model to evaluate each chapter's degree of thematic unity!
 
-```
+```{r}
+# Aggregate tablets by their value from the Vol_Chap column of our spreadsheet
 grouped.documents <- aggregate(Text~Vol_Chap, documents, paste, collapse=' ')
 
-head(grouped.documents)
+names(grouped.documents)
+
+grouped.documents$Text[1]
 ```
 
-## 3. Evaluate Our Model
+Now that we've done some work to revise our model, let's perform the training again using aggregations of each chapter's nouns.
 
+```{r}
+grouped.documents <- aggregate(Text.Nouns~Vol_Chap, documents, paste, collapse=' ')
+
+mallet.instances <- mallet.import(grouped.documents$Vol_Chap, grouped.documents$Text.Nouns, "Data/stoplist.csv", FALSE, token.regexp="[\\p{L}|\\p{N}|\\p{P}']+")
+
+n.topics = 10
+topic.model <- MalletLDA(n.topics)
+topic.model$loadDocuments(mallet.instances)
+topic.model$setAlphaOptimization(10, 200)
+topic.model$train(2500)
 ```
-## Show the first few document titles with at least .25 of its content devoted to topic 4
-head(documents$title[ doc.topics[4,] > 0.25 ],10)
 
-## Show title of the most representative text for topic 4
-documents[which.max(doc.topics[4,]),]$title
+## 4. Visualizing
+
+The topic model produces a great deal of information, so it can be helpful to get a bird's-eye-view by visualizing the relationships among words, topics, and texts.
+
+```{r}
+
+# Collect our new topic information
+doc.topics <- mallet.doc.topics(topic.model, smoothed=T, normalized=T)
+topic.words <- mallet.topic.words(topic.model, smoothed=T, normalized=T)
+topics.labels <- rep("", n.topics)
+for (topic in 1:n.topics)
+{
+  topics.labels[topic] <- paste(mallet.top.words(topic.model, topic.words[topic,], num.top.words=5)$words, collapse=" ")
+}
+
+# Visualize the relative similarities of our topics based on shared words, with heirarchical clustering
+plot(hclust(dist(topic.words)), labels=topics.labels)
+
+# Visualize the relative similarities of our documents based on shared topics, with heirarchical clustering
+plot(hclust(dist(doc.topics)), labels=grouped.documents$Vol_Chap)
+
+# Alternately, we can simply try to visuzlize the similarities among all texts simulataneously as their relative distances from one another on the basis of their topics. This kind of visualization is commonly referred to as Multi-Dimensional Scaling (MDS). In this case, we scale distances down to 2 dimensions.
+
+fit <- cmdscale(dist(doc.topics), k=2) # k is the number of dim
+x <- fit[,1]
+y <- fit[,2]
+plot(x, y, xlab="Coordinate 1", ylab="Coordinate 2", main="MDS",   type="n")
+text(x, y, labels = grouped.documents$Vol_Chap, cex=.7)
+```
+
+

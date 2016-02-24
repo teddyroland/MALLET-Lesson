@@ -178,7 +178,7 @@ names(grouped.documents)
 grouped.documents$Text[1]
 ```
 
-Now that we've done some work to revise our model, let's perform the training again using aggregations of each chapter's nouns.
+Now that we've done some work to revise our model, let's perform the training again using aggregations of each chapter's nouns. And to make things interesting, let's set the model to look for 25 topics.
 
 ```{r}
 grouped.documents <- aggregate(Text.Nouns~Vol_Chap, documents, paste, collapse=' ')
@@ -186,7 +186,7 @@ grouped.documents <- aggregate(Text.Nouns~Vol_Chap, documents, paste, collapse='
 mallet.instances <- mallet.import(grouped.documents$Vol_Chap, grouped.documents$Text.Nouns,
                                   "Data/stoplist.csv", FALSE, token.regexp="[\\p{L}|\\p{N}|\\p{P}']+")
 
-n.topics = 10
+n.topics = 25
 topic.model <- MalletLDA(n.topics)
 topic.model$loadDocuments(mallet.instances)
 topic.model$setAlphaOptimization(10, 200)
@@ -205,16 +205,22 @@ topic.words <- mallet.topic.words(topic.model, smoothed=T, normalized=T)
 topics.labels <- rep("", n.topics)
 for (topic in 1:n.topics)
 {
-  topics.labels[topic] <- paste(mallet.top.words(topic.model, topic.words[topic,], num.top.words=5)$words, collapse=" ")
+  topics.labels[topic] <- paste(
+    mallet.top.words(topic.model, topic.words[topic,], num.top.words=3)$words, collapse=" ")
 }
 
-# Visualize the relative similarities of our topics based on shared words, with heirarchical clustering
+# Visualize the relative similarities of our topics based on shared words,
+# with heirarchical clustering
 plot(hclust(dist(topic.words)), labels=topics.labels)
 
-# Visualize the relative similarities of our documents based on shared topics, with heirarchical clustering
+# Visualize the relative similarities of our documents based on shared topics,
+# with heirarchical clustering
 plot(hclust(dist(doc.topics)), labels=grouped.documents$Vol_Chap)
 
-# Alternately, we can simply try to visuzlize the similarities among all texts simulataneously as their relative distances from one another on the basis of their topics. This kind of visualization is commonly referred to as Multi-Dimensional Scaling (MDS). In this case, we scale distances down to 2 dimensions.
+# Alternately, we can simply try to visuzlize the similarities among all texts
+#simulataneously as their relative distances from one another on the basis of
+#their topics. This kind of visualization is commonly referred to as Multi-Dimensional
+#Scaling (MDS). In this case, we scale distances down to 2 dimensions.
 
 fit <- cmdscale(dist(doc.topics), k=2) # k is the number of dim
 x <- fit[,1]
@@ -222,5 +228,3 @@ y <- fit[,2]
 plot(x, y, xlab="Coordinate 1", ylab="Coordinate 2", main="MDS",   type="n")
 text(x, y, labels = grouped.documents$Vol_Chap, cex=.7)
 ```
-
-
